@@ -10,7 +10,9 @@ import random, itertools, copy, concurrent.futures, threading, time
 # EXAMPLE VERSION
 # #######################
 import playerExampleRandom as playerBmodule
-import playerExampleAlpha as playerRmodule
+import playerExampleAlpha.playerExampleAlpha as playerRmodule
+import playerExample2Alpha.playerExample2Alpha as playerCmodule
+import playerEuristica0.playerExampleAlpha0 as playerZmodule #creato da noi 
 # #######################
 
 class Game:
@@ -332,8 +334,19 @@ class CephalopodGUI:
             self.play_turn()
             time.sleep(0.5)
         if self.game.is_terminal(self.state_history[-1]):
-            self.show_game_over("La partita è terminata.")
-            #messagebox.showinfo("Fine partita", "La partita è terminata.")
+            final_state = self.state_history[-1]
+            blue_count = final_state.count("Blue")
+            red_count = final_state.count("Red")
+            
+            if blue_count > red_count:
+                winner = "Blue"
+            elif red_count > blue_count:
+                winner = "Red"
+            else:
+                winner = "Pareggio"
+
+            message = f"Partita terminata!\nBlue: {blue_count}  -  Red: {red_count}\nVincitore: {winner}"
+            messagebox.showinfo("Fine partita", message)
 
     # Funzione per eseguire il turno del giocatore.
     def play_turn(self):
@@ -345,11 +358,11 @@ class CephalopodGUI:
         move = None
         if self.player_types[current_player] == "ai":
             if current_player == "Blue":
-                future = self.executor.submit(playerBmodule.playerStrategy, self.game, state)
-                print(f"AI Blue sta usando la strategia {playerBmodule.__name__}...")
-            else:
                 future = self.executor.submit(playerRmodule.playerStrategy, self.game, state)
-                print(f"AI Red sta usando la strategia {playerRmodule.__name__}...")
+                print(f"AI Blue sta usando la strategia {playerRmodule.__name__}...")
+            else:
+                future = self.executor.submit(playerZmodule.playerStrategy, self.game, state)
+                print(f"AI Red sta usando la strategia {playerZmodule.__name__}...")
             # Attendi il risultato della funzione di strategia dell'AI
             # Se il risultato non arriva entro il timeout, scegli una mossa casuale
             # e mostra un messaggio di timeout

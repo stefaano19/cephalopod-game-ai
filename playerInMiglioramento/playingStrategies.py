@@ -163,67 +163,158 @@ def h(board, player):
     Implementa l'euristica per la valutazione della posizione sulla scacchiera.
     """
     punteggio = 0
-   
-    centro_punteggio=0
-    if board.board[2][2]==None:
-        centro_punteggio +=10
-        
-    punteggio += centro_punteggio
+    punteggio += controllo_centro(board) #fatto
+    punteggio += calcola_valore_dadi(board, player) #fatto 
+    punteggio += calcola_punteggio_cattura(board, player) #fatto
+   # punteggio += calcola_posizioni_vulnerabili #da fare
+   # punteggio += calcola_valori_dadi_alti #da fare 
 
-    valore_dadi=0
+    return punteggio
+
+def calcola_valore_dadi(board, player):
+    valore_dadi = 0
     for riga in board.board:
         for dado in riga:
-            if dado==player:
-                valore_dadi += 3
-                
-            elif dado != None  :
-                valore_dadi -=2
-                
-    punteggio += valore_dadi
+            if dado is not None:
+                if dado[0] == player:
+                    valore_dadi += dado[1]  # aggiungi i pip dei tuoi dadi
+                else:
+                    valore_dadi -= dado[1]  # togli i pip degli avversari
+    return valore_dadi
 
-    cattura_punteggio = 0
-    m = 0 
-    result = None
+
+def controllo_centro(board):
+    centro_punteggio=0
+    if board.board[2][2]==None:
+        centro_punteggio +=100
+    return centro_punteggio
+
+"""def calcola_punteggio_cattura(board, player):
+    # mappa della somma pip → punteggio
+    punteggi = {
+        6: 20,
+        5: 16,
+        4: 14,
+        3: 12,
+        2: 10
+    }
+
+    punteggio_bonus = 0
 
     for i in range(board.size):
         for j in range(board.size):
-            cell = board.board[i][j]
-            if cell is not None and cell[0] != player:
-                cattura = is_capturable(board, i, j, player)
-                if cattura is not None:
-                    pos, pip_sum = cattura
-                    if pip_sum > m:
-                        m = pip_sum
-                        result = pos
+            cella = board.board[i][j]
+            if cella is not None and cella[0] != player:
+                mosse = valuta_cattura(board, i, j)
+                for somma, pos in mosse.items():
+                    if somma in punteggi:
+                        punteggio_bonus += punteggi[somma]
 
-    if result is not None:
-        cattura_punteggio += 20  # bonus se troviamo almeno una cattura buona
+    return punteggio_bonus
 
-    print(f"Punteggio cattura: {cattura_punteggio}")
-    punteggio += cattura_punteggio
+    """
+def calcola_punteggio_cattura(board, player):
+    punteggio_bonus = 0
+    max_bonus = 0
+
+    for i in range(board.size):
+        for j in range(board.size):
+            cella = board.board[i][j]
+            if cella is not None:
+                catture = valuta_cattura(board, i, j)
+
+                for somma, mosse in catture.items():
+                    for mossa in mosse:
+                        if mossa["punteggio"] > max_bonus:
+                            max_bonus = mossa["punteggio"]
+
+    punteggio_bonus += max_bonus
+    return punteggio_bonus
+
+
+
+
+""" def valuta_cattura(board, r, c):
+    pip_adiacenti = [
+        board.board[nr][nc][1]
+        for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        if 0 <= (nr := r + dr) < board.size
+        and 0 <= (nc := c + dc) < board.size
+        and board.board[nr][nc] is not None
+    ]
+
+    if len(pip_adiacenti) < 2:
+        return None
+
+    somma_massima = 0
+    for r_size in range(2, len(pip_adiacenti) + 1):
+        for subset in itertools.combinations(pip_adiacenti, r_size):
+            somma = sum(subset)
+            if 2 <= somma <= 6 and somma > somma_massima:
+                somma_massima = somma
+
+    if somma_massima > 0:
+        return (r, c), somma_massima
+
+    return None """
+
+
+def valuta_cattura(board, r, c):
+    # Ottieni pip adiacenti con le loro coordinate
+    adiacenti = [
+        ((nr, nc), board.board[nr][nc][1])
+        for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        if 0 <= (nr := r + dr) < board.size
+        and 0 <= (nc := c + dc) < board.size
+        and board.board[nr][nc] is not None
+    ]
+
+    if len(adiacenti) < 2:
+        return {}
+
+    punteggi = {6: 20, 5: 18, 4: 16, 3: 14, 2: 12}
+    catture = {}
+    visti = set()  # Per evitare duplicati
+
+    for r_size in range(2, len(adiacenti) + 1):
+        for subset in itertools.combinations(adiacenti, r_size):
+            celle = tuple(sorted(pos for pos, _ in subset))
+            somma = sum(pip for _, pip in subset)
+            if 2 <= somma <= 6 and celle not in visti:
+                visti.add(celle)
+                catture.setdefault(somma, []).append({
+                    "bersaglio": (r, c),
+                    "celle_coinvolte": celle,
+                    "punteggio": punteggi[somma]
+                })
+
+    return catture
+
+
+def calcola_posizioni_vulnerabili(stato):
+    # Penalizza le mosse che mettono i dadi in posizioni vulnerabili
+    punteggio = 0
+    # Logica per trovare posizioni vulnerabili
     return punteggio
 
+def is_vulnerable(board, i, j, player):
+    """
+    Funzione che determina se un dado è vulnerabile a una cattura dell'avversario.
+    """
+    # Controlla le posizioni adiacenti per verificare se l'avversario può catturare il dado
+    avversario = 1 if player == 2 else 2  # Se il giocatore è 1, l'avversario è 2, e viceversa
+    for di, dj in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+        ni, nj = i + di, j + dj
+        if 0 <= ni < len(board) and 0 <= nj < len(board[0]) and board[ni][nj] == avversario:
+            return True
+    return False
 
-def is_capturable(board, r, c, player):
-    adjacent = []
-    for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-        nr, nc = r + dr, c + dc
-        if 0 <= nr < board.size and 0 <= nc < board.size:
-            neighbor = board.board[nr][nc]
-            if neighbor is not None:
-                adjacent.append(neighbor[1])  # pip
+def calcola_valori_dadi_alti(stato):
+    # Premia i dadi con valori alti sulla scacchiera
+    punteggio = 0
+    for riga in stato:
+        for dado in riga:
+            if dado > 5:  # Dadi con valore maggiore di 5 sono considerati forti
+                punteggio += dado
+    return punteggio
 
-    if len(adjacent) >= 2:
-        max_sum = 0
-        best_pos = None
-        for r_size in range(2, len(adjacent) + 1):
-            for subset in itertools.combinations(adjacent, r_size):
-                pip_sum = sum(subset)
-                if 2 <= pip_sum <= 6 and pip_sum > max_sum:
-                    max_sum = pip_sum
-                    best_pos = (r, c)
-
-        if best_pos:
-            return best_pos, max_sum
-
-    return None
