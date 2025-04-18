@@ -1,4 +1,4 @@
-import playerExampleAlpha.playingStrategies as playingStrategies
+import playerMigliore.playingStrategies as playingStrategies
 #import random
 #import game
 

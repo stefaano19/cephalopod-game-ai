@@ -10,8 +10,8 @@ import random, itertools, copy, concurrent.futures, threading, time
 # EXAMPLE VERSION
 # #######################
 import playerExampleRandom as playerBmodule
-import playerExampleAlpha.playerExampleAlpha as playerRmodule
-import playerExample2Alpha.playerExample2Alpha as playerCmodule
+import playerMigliore.playerExampleAlpha as playerRmodule
+import playerInMiglioramento.playerExample2Alpha as playerCmodule
 import playerEuristica0.playerExampleAlpha0 as playerZmodule #creato da noi 
 # #######################
 

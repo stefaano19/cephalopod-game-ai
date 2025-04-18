@@ -1,7 +1,6 @@
 import itertools
 import math
 
-from CephalopodGame import get_subsets
 
 def minimax_search(game, state):
     """Search game tree to determine best move; return (value, move) pair."""
