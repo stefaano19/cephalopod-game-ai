@@ -1,4 +1,4 @@
-import playerMigliore.playingStrategies as playingStrategies
+import playerFattoDaNoi.playingStrategies as playingStrategies
 #import random
 #import game
 

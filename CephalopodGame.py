@@ -10,9 +10,14 @@ import random, itertools, copy, concurrent.futures, threading, time
 # EXAMPLE VERSION
 # #######################
 import playerExampleRandom as playerBmodule
-import playerMigliore.playerExampleAlpha as playerRmodule
-import playerInMiglioramento.playerExample2Alpha as playerCmodule
+import playerDifAtt.playerExample2Alpha as playerDinamico
+import playerBruniBruscoRomeo.playerBruniBruscoRomeo as player1
+import playerInMiglioramento.playerExample2Alpha as playerGeminiPiùForte
 import playerEuristica0.playerExampleAlpha0 as playerZmodule #creato da noi 
+import playerGemini.playerExampleAlpha0 as playerGeminimodule
+import playerBruniBruscoRomeo.playerBruniBruscoRomeo as playerBruniBruscoRomeo
+import playerPiùForteChat.playerExampleAlpha0 as playerChatmodule
+import playerExampleRandom as playerRandom
 # #######################
 
 class Game:
@@ -358,11 +363,11 @@ class CephalopodGUI:
         move = None
         if self.player_types[current_player] == "ai":
             if current_player == "Blue":
-                future = self.executor.submit(playerRmodule.playerStrategy, self.game, state)
-                print(f"AI Blue sta usando la strategia {playerRmodule.__name__}...")
+                future = self.executor.submit(playerBruniBruscoRomeo.playerStrategy, self.game, state)
+                print(f"AI Blue sta usando la strategia {playerBruniBruscoRomeo.__name__}...")
             else:
-                future = self.executor.submit(playerZmodule.playerStrategy, self.game, state)
-                print(f"AI Red sta usando la strategia {playerZmodule.__name__}...")
+                future = self.executor.submit(playerGeminimodule.playerStrategy, self.game, state)
+                print(f"AI Red sta usando la strategia {playerGeminimodule.__name__}...")
             # Attendi il risultato della funzione di strategia dell'AI
             # Se il risultato non arriva entro il timeout, scegli una mossa casuale
             # e mostra un messaggio di timeout

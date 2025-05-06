@@ -158,17 +158,75 @@ def h_alphabeta_search(game, state, cutoff=cutoff_depth(2)):
     return max_value(state, -infinity, +infinity, 0)
 
 def h(board, player):
-    """
-    Implementa l'euristica per la valutazione della posizione sulla scacchiera.
-    """
     punteggio = 0
-    punteggio += controllo_centro(board) #fatto
-    punteggio += calcola_valore_dadi(board, player) #fatto 
-    punteggio += calcola_punteggio_cattura(board, player) #fatto
-   # punteggio += calcola_posizioni_vulnerabili #da fare
-   # punteggio += calcola_valori_dadi_alti #da fare 
+
+    # 1. Controllo del centro (assumiamo centro 5x5)
+    centro_punteggio = controllo_centro(board)
+    punteggio += centro_punteggio
+
+    # 2. Valore netto dei dadi
+    punteggio += calcola_valore_dadi(board, player) * 10
+
+    # 3. Punteggio potenziale da catture
+    punteggio += calcola_punteggio_cattura(board, player) * 1.5
+
+    # 4. Penalità per vulnerabilità
+    punteggio -= calcola_posizioni_vulnerabili(board, player) * 2
+
+    # 5. Premi i dadi forti (valore > 5)
+    punteggio += calcola_valori_dadi_alti(board.board) * 5
+
+    # 6. Penalità per dadi isolati (senza alleati vicini)
+    punteggio -= calcola_dadi_isolati(board, player) * 15
+
+    # 7. Bonus se vicini a bersagli deboli
+    punteggio += calcola_vicinanza_a_bersagli(board, player) * 5
 
     return punteggio
+
+def calcola_dadi_isolati(board, player):
+    isolati = 0
+    for i in range(board.size):
+        for j in range(board.size):
+            cella = board.board[i][j]
+            if cella is not None and cella[0] == player:
+                alleato_vicino = False
+                for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    ni, nj = i + dx, j + dy
+                    if 0 <= ni < board.size and 0 <= nj < board.size:
+                        vicino = board.board[ni][nj]
+                        if vicino is not None and vicino[0] == player:
+                            alleato_vicino = True
+                            break
+                if not alleato_vicino:
+                    isolati += 1
+    return isolati
+
+def calcola_posizioni_vulnerabili(board, player):
+    vulnerabili = 0
+    for i in range(board.size):
+        for j in range(board.size):
+            dado = board.board[i][j]
+            if dado is not None and dado[0] == player:
+                if is_vulnerable(board, i, j, player):
+                    vulnerabili += 1
+    return vulnerabili
+
+
+def calcola_vicinanza_a_bersagli(board, player):
+    bonus = 0
+    avversario = 1 if player == 2 else 2
+    for i in range(board.size):
+        for j in range(board.size):
+            dado = board.board[i][j]
+            if dado is not None and dado[0] == player:
+                for dx, dy in [(-1,0), (1,0), (0,-1), (0,1)]:
+                    ni, nj = i + dx, j + dy
+                    if 0 <= ni < board.size and 0 <= nj < board.size:
+                        vicino = board.board[ni][nj]
+                        if vicino is not None and vicino[0] == avversario and vicino[1] <= 3:
+                            bonus += 1
+    return bonus
 
 def calcola_valore_dadi(board, player):
     valore_dadi = 0
