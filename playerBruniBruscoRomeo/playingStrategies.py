@@ -158,104 +158,88 @@ def h_alphabeta_search(game, state, cutoff=cutoff_depth(2)):
     return max_value(state, -infinity, +infinity, 0)
 
 def h(board, player):
+    peso_centro=0.4
+    peso_cattura=1.2
+    peso_vulnerabilita=8.0
+   
     punteggio = 0
-    punteggio += 0.3 * controllo_centro(board)
+    punteggio += peso_centro * controllo_centro(board, player)
     punteggio += calcola_valore_dadi(board, player)
-    punteggio += 1.2 * calcola_punteggio_cattura(board, player)
-
-    # Aspetto difensivo potenziato:
-    penalty_vulnerable = 0
-    if hasattr(board, 'board') and hasattr(board, 'size'):
-        for r in range(board.size):
-            for c in range(board.size):
-                dado = board.board[r][c]
-                if dado is not None and dado[0] == player:
-                    if is_vulnerable(board.board, r, c, player):
-                        penalty_vulnerable += 8
-    elif isinstance(board, list):
-        size = len(board)
-        for r in range(size):
-            for c in range(size):
-                dado = board[r][c]
-                if dado is not None and dado[0] == player:
-                    if is_vulnerable(board, r, c, player):
-                        penalty_vulnerable += 8
-
+    punteggio += peso_cattura * calcola_punteggio_cattura(board, player)
+    #punteggio += peso_mobilita * calcola_mobilita(board, player)
+    #punteggio += peso_futuro * potenziale_cattura_futura(board, player)
+    
+    penalty_vulnerable = calcola_vulnerabilita_ottimizzata(board, player, peso_vulnerabilita)
     punteggio -= penalty_vulnerable
 
-    # Mobilità
-    if hasattr(board, 'size'):
-        try:
-            # Assumendo che 'calcola_mobilita' accetti 'board' e 'player'
-            punteggio += 0.5 * calcola_mobilita(board, player)
-        except Exception as e:
-            print(f"Errore nel calcolo della mobilità: {e}")
-
+    
     return punteggio
 
 def calcola_valore_dadi(board, player):
     valore_dadi = 0
-    game_board = getattr(board, 'board', board if isinstance(board, list) else None)
-    if game_board:
-        for riga in game_board:
-            for dado in riga:
-                if dado is not None:
-                    valore_dadi += dado[1] if dado[0] == player else -dado[1]
+    game_board = board.board if hasattr(board, 'board') else board
+    if not game_board:
+        return 0
+    for riga in game_board:
+        for dado in riga:
+            if dado is not None:
+                val = dado[1]
+                if dado[0] == player:
+                    valore_dadi += 1.1 * val
+                else:
+                    valore_dadi -= val
     return valore_dadi
 
 
-def controllo_centro(board):
-    centro_punteggio = 0
-    game_board = getattr(board, 'board', board if isinstance(board, list) else None)
-    size = getattr(board, 'size', len(game_board) if isinstance(game_board, list) else 0)
-    if game_board and size > 2 and len(game_board[2]) > 2:
-        if game_board[2][2] is None:
-            centro_punteggio += 100
-    return centro_punteggio
+def controllo_centro(board, player):
+    size = board.size if hasattr(board, 'size') else (len(board) if isinstance(board, list) else 0)
+    if size > 0 and 0 <= size // 2 < size:
+        r_centro, c_centro = size // 2, size // 2
+        game_board = board.board if hasattr(board, 'board') else board
+        if game_board:
+            cella_centro = game_board[r_centro][c_centro]
+            if cella_centro is None:
+                return 10
+            elif cella_centro[0] != player:
+                return -5
+    return 0
+
 
 def calcola_mobilita(state, player):
-    """
-    Calcola quante celle vuote sono adiacenti a uno dei dadi del giocatore.
-    """
     mobilita = set()
-    board = getattr(state, 'board', state if isinstance(state, list) else None)
-    size = getattr(state, 'size', len(board) if isinstance(board, list) else 0)
-    if board:
-        for r in range(size):
-            for c in range(size):
-                if board[r][c] is not None and board[r][c][0] == player:
-                    for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-                        nr, nc = r + dr, c + dc
-                        if 0 <= nr < size and 0 <= nc < size and board[nr][nc] is None:
-                            mobilita.add((nr, nc))
+    board = state.board if hasattr(state, 'board') else state
+    if not board:
+        return 0
+    size = len(board)
+    for i in range(size):
+        for j in range(size):
+            if board[i][j] is not None and board[i][j][0] == player:
+                for di, dj in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    ni, nj = i + di, j + dj
+                    if 0 <= ni < size and 0 <= nj < size and board[ni][nj] is None:
+                        mobilita.add((ni, nj))
     return len(mobilita)
 
-
 def calcola_punteggio_cattura(board, player):
-    punteggio_bonus = 0
     max_bonus = 0
-    game_board = getattr(board, 'board', board if isinstance(board, list) else None)
-    size = getattr(board, 'size', len(game_board) if isinstance(game_board, list) else 0)
-
-    if game_board:
-        for r in range(size):
-            for c in range(size):
-                cella = game_board[r][c]
-                if cella is not None:
-                    catture = valuta_cattura(board, r, c)
-                    for _, mosse in catture.items():
-                        for mossa in mosse:
-                            max_bonus = max(max_bonus, mossa.get("punteggio", 0))
-    punteggio_bonus += max_bonus
-    return punteggio_bonus
-
+    game_board = board.board if hasattr(board, 'board') else board
+    if not game_board:
+        return 0
+    size = len(game_board)
+    for i in range(size):
+        for j in range(size):
+            if game_board[i][j] is not None:
+                catture = valuta_cattura(board, i, j)
+                for mosse in catture.values():
+                    for mossa in mosse:
+                        max_bonus = max(max_bonus, mossa["punteggio"])
+    return max_bonus
 
 def valuta_cattura(board_or_state, r, c):
-    game_board = getattr(board_or_state, 'board', board_or_state if isinstance(board_or_state, list) else None)
-    size = len(game_board) if isinstance(game_board, list) else getattr(board_or_state, 'size', 0)
+    game_board = board_or_state.board if hasattr(board_or_state, 'board') else board_or_state
     if not game_board:
         return {}
-
+    size = len(game_board)
     adiacenti = []
     for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
         nr, nc = r + dr, c + dc
@@ -273,6 +257,13 @@ def valuta_cattura(board_or_state, r, c):
         for subset in itertools.combinations(adiacenti, r_size):
             celle = tuple(sorted(pos for pos, _ in subset))
             somma = sum(pip for _, pip in subset)
+            if somma == 6: 
+                catture.setdefault(somma, []).append({
+                    "bersaglio": (r, c),
+                    "celle_coinvolte": celle,
+                    "punteggio": punteggi.get(somma, 0)
+                })
+                break
             if 2 <= somma <= 6 and celle not in visti:
                 visti.add(celle)
                 catture.setdefault(somma, []).append({
@@ -282,25 +273,37 @@ def valuta_cattura(board_or_state, r, c):
                 })
     return catture
 
-def is_vulnerable(board_state, r, c, player):
-    if not board_state:
-        return False
+def calcola_vulnerabilita_ottimizzata(board, player, peso_vulnerabilita):
+    penalty_vulnerable = 0
+    game_board = board.board if hasattr(board, 'board') else board
+    if not game_board:
+        return 0
+    size = len(game_board)
     opponent = 1 if player == 2 else 2
-    size = len(board_state)
-    for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-        nr, nc = r + dr, c + dc
-        if 0 <= nr < size and 0 <= nc < size and board_state[nr][nc] is not None and board_state[nr][nc][0] == opponent:
-            return True
-    return False
+    for r in range(size):
+        for c in range(size):
+            dado = game_board[r][c]
+            if dado is not None and dado[0] == player:
+                dado_valore = dado[1]
+                vulnerability_score = 0
+                for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    nr, nc = r + dr, c + dc
+                    if 0 <= nr < size and 0 <= nc < size:
+                        vicino = game_board[nr][nc]
+                        if vicino is not None and vicino[0] == opponent:
+                            vulnerability_score += vicino[1]
+                if vulnerability_score >= dado_valore:
+                    penalty_vulnerable += peso_vulnerabilita
+    return penalty_vulnerable
+
 
 def calcola_valori_dadi_alti(stato):
     punteggio = 0
-    board = getattr(stato, 'board', stato if isinstance(stato, list) else None)
-    if board:
-        for riga in board:
-            for cella in riga:
-                if isinstance(cella, tuple) and len(cella) == 2:
-                    valore_dado = cella[1]
-                    if valore_dado > 5:
-                        punteggio += valore_dado
+    board = stato.board if hasattr(stato, 'board') else stato
+    if not board:
+        return 0
+    for riga in board:
+        for cella in riga:
+            if isinstance(cella, tuple) and len(cella) == 2 and cella[1] > 5:
+                punteggio += cella[1]
     return punteggio

@@ -157,76 +157,28 @@ def h_alphabeta_search(game, state, cutoff=cutoff_depth(2)):
 
     return max_value(state, -infinity, +infinity, 0)
 
+import itertools
+
 def h(board, player):
     punteggio = 0
 
-    # 1. Controllo del centro (assumiamo centro 5x5)
-    centro_punteggio = controllo_centro(board)
-    punteggio += centro_punteggio
+    # 1. Valore dei dadi
+    punteggio += calcola_valore_dadi(board, player)
 
-    # 2. Valore netto dei dadi
-    punteggio += calcola_valore_dadi(board, player) * 10
+    # 2. Controllo del centro
+    punteggio += controllo_centro(board)
 
-    # 3. Punteggio potenziale da catture
-    punteggio += calcola_punteggio_cattura(board, player) * 1.5
+    # 3. Potenziale di cattura
+    punteggio += calcola_punteggio_cattura(board, player)
 
-    # 4. Penalità per vulnerabilità
-    punteggio -= calcola_posizioni_vulnerabili(board, player) * 2
+    # 4. Penalizzazione per posizioni vulnerabili
+    punteggio -= calcola_posizioni_vulnerabili(board, player)
 
-    # 5. Premi i dadi forti (valore > 5)
-    punteggio += calcola_valori_dadi_alti(board.board) * 5
-
-    # 6. Penalità per dadi isolati (senza alleati vicini)
-    punteggio -= calcola_dadi_isolati(board, player) * 15
-
-    # 7. Bonus se vicini a bersagli deboli
-    punteggio += calcola_vicinanza_a_bersagli(board, player) * 5
+    # 5. Valore dei dadi alti
+    punteggio += calcola_valori_dadi_alti(board, player)
 
     return punteggio
 
-def calcola_dadi_isolati(board, player):
-    isolati = 0
-    for i in range(board.size):
-        for j in range(board.size):
-            cella = board.board[i][j]
-            if cella is not None and cella[0] == player:
-                alleato_vicino = False
-                for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-                    ni, nj = i + dx, j + dy
-                    if 0 <= ni < board.size and 0 <= nj < board.size:
-                        vicino = board.board[ni][nj]
-                        if vicino is not None and vicino[0] == player:
-                            alleato_vicino = True
-                            break
-                if not alleato_vicino:
-                    isolati += 1
-    return isolati
-
-def calcola_posizioni_vulnerabili(board, player):
-    vulnerabili = 0
-    for i in range(board.size):
-        for j in range(board.size):
-            dado = board.board[i][j]
-            if dado is not None and dado[0] == player:
-                if is_vulnerable(board, i, j, player):
-                    vulnerabili += 1
-    return vulnerabili
-
-
-def calcola_vicinanza_a_bersagli(board, player):
-    bonus = 0
-    avversario = 1 if player == 2 else 2
-    for i in range(board.size):
-        for j in range(board.size):
-            dado = board.board[i][j]
-            if dado is not None and dado[0] == player:
-                for dx, dy in [(-1,0), (1,0), (0,-1), (0,1)]:
-                    ni, nj = i + dx, j + dy
-                    if 0 <= ni < board.size and 0 <= nj < board.size:
-                        vicino = board.board[ni][nj]
-                        if vicino is not None and vicino[0] == avversario and vicino[1] <= 3:
-                            bonus += 1
-    return bonus
 
 def calcola_valore_dadi(board, player):
     valore_dadi = 0
@@ -234,42 +186,20 @@ def calcola_valore_dadi(board, player):
         for dado in riga:
             if dado is not None:
                 if dado[0] == player:
-                    valore_dadi += dado[1]  # aggiungi i pip dei tuoi dadi
+                    valore_dadi += dado[1]
                 else:
-                    valore_dadi -= dado[1]  # togli i pip degli avversari
+                    valore_dadi -= dado[1]
     return valore_dadi
 
 
 def controllo_centro(board):
-    centro_punteggio=0
-    if board.board[2][2]==None:
-        centro_punteggio +=100
+    centro_punteggio = 0
+    mid = board.size // 2
+    if board.board[mid][mid] is None:
+        centro_punteggio += 100
     return centro_punteggio
 
-"""def calcola_punteggio_cattura(board, player):
-    # mappa della somma pip → punteggio
-    punteggi = {
-        6: 20,
-        5: 16,
-        4: 14,
-        3: 12,
-        2: 10
-    }
 
-    punteggio_bonus = 0
-
-    for i in range(board.size):
-        for j in range(board.size):
-            cella = board.board[i][j]
-            if cella is not None and cella[0] != player:
-                mosse = valuta_cattura(board, i, j)
-                for somma, pos in mosse.items():
-                    if somma in punteggi:
-                        punteggio_bonus += punteggi[somma]
-
-    return punteggio_bonus
-
-    """
 def calcola_punteggio_cattura(board, player):
     punteggio_bonus = 0
     max_bonus = 0
@@ -279,7 +209,6 @@ def calcola_punteggio_cattura(board, player):
             cella = board.board[i][j]
             if cella is not None:
                 catture = valuta_cattura(board, i, j)
-
                 for somma, mosse in catture.items():
                     for mossa in mosse:
                         if mossa["punteggio"] > max_bonus:
@@ -289,35 +218,7 @@ def calcola_punteggio_cattura(board, player):
     return punteggio_bonus
 
 
-
-
-""" def valuta_cattura(board, r, c):
-    pip_adiacenti = [
-        board.board[nr][nc][1]
-        for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]
-        if 0 <= (nr := r + dr) < board.size
-        and 0 <= (nc := c + dc) < board.size
-        and board.board[nr][nc] is not None
-    ]
-
-    if len(pip_adiacenti) < 2:
-        return None
-
-    somma_massima = 0
-    for r_size in range(2, len(pip_adiacenti) + 1):
-        for subset in itertools.combinations(pip_adiacenti, r_size):
-            somma = sum(subset)
-            if 2 <= somma <= 6 and somma > somma_massima:
-                somma_massima = somma
-
-    if somma_massima > 0:
-        return (r, c), somma_massima
-
-    return None """
-
-
 def valuta_cattura(board, r, c):
-    # Ottieni pip adiacenti con le loro coordinate
     adiacenti = [
         ((nr, nc), board.board[nr][nc][1])
         for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]
@@ -331,7 +232,7 @@ def valuta_cattura(board, r, c):
 
     punteggi = {6: 20, 5: 18, 4: 16, 3: 14, 2: 12}
     catture = {}
-    visti = set()  # Per evitare duplicati
+    visti = set()
 
     for r_size in range(2, len(adiacenti) + 1):
         for subset in itertools.combinations(adiacenti, r_size):
@@ -348,30 +249,32 @@ def valuta_cattura(board, r, c):
     return catture
 
 
-def calcola_posizioni_vulnerabili(stato):
-    # Penalizza le mosse che mettono i dadi in posizioni vulnerabili
+def calcola_posizioni_vulnerabili(board, player):
     punteggio = 0
-    # Logica per trovare posizioni vulnerabili
+    for i in range(board.size):
+        for j in range(board.size):
+            cella = board.board[i][j]
+            if cella is not None and cella[0] == player:
+                if is_vulnerable(board.board, i, j, player):
+                    punteggio += 5  # Penalità per ogni dado vulnerabile
     return punteggio
 
-def is_vulnerable(board, i, j, player):
-    """
-    Funzione che determina se un dado è vulnerabile a una cattura dell'avversario.
-    """
-    # Controlla le posizioni adiacenti per verificare se l'avversario può catturare il dado
-    avversario = 1 if player == 2 else 2  # Se il giocatore è 1, l'avversario è 2, e viceversa
+
+def is_vulnerable(board_array, i, j, player):
+    avversario = 1 if player == 2 else 2
     for di, dj in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
         ni, nj = i + di, j + dj
-        if 0 <= ni < len(board) and 0 <= nj < len(board[0]) and board[ni][nj] == avversario:
-            return True
+        if 0 <= ni < len(board_array) and 0 <= nj < len(board_array[0]):
+            vicino = board_array[ni][nj]
+            if vicino is not None and vicino[0] == avversario:
+                return True
     return False
 
-def calcola_valori_dadi_alti(stato):
-    # Premia i dadi con valori alti sulla scacchiera
-    punteggio = 0
-    for riga in stato:
-        for dado in riga:
-            if dado > 5:  # Dadi con valore maggiore di 5 sono considerati forti
-                punteggio += dado
-    return punteggio
 
+def calcola_valori_dadi_alti(board, player):
+    punteggio = 0
+    for riga in board.board:
+        for dado in riga:
+            if dado is not None and dado[0] == player and dado[1] > 5:
+                punteggio += dado[1]
+    return punteggio

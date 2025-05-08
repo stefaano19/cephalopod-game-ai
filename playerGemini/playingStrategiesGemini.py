@@ -157,12 +157,13 @@ def h_alphabeta_search(game, state, cutoff=cutoff_depth(2)):
 
     return max_value(state, -infinity, +infinity, 0)
 
+
 def h(board, player):
     punteggio = 0
     punteggio += 0.5 * controllo_centro(board)
     punteggio += calcola_valore_dadi(board, player)
     punteggio += 0.8 * calcola_punteggio_cattura(board, player)
-    punteggio += calcola_mobilita(board, player)
+    #punteggio += calcola_mobilita(board, player)
 
     # Defensive aspect: Penalize vulnerable positions
     penalty_vulnerable = 0
@@ -304,7 +305,7 @@ def valuta_cattura(board_or_state, r, c):
     if len(adiacenti) < 2:
         return {}
 
-    punteggi = {6: 20, 5: 18, 4: 16, 3: 14, 2: 12}
+    punteggi = {6: 20, 5: 15, 4: 16, 3: 14, 2: 12}
     catture = {}
     visti = set()
 

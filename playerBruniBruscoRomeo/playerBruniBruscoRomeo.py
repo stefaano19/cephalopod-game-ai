@@ -1,4 +1,4 @@
-import playerBruniBruscoRomeo.playingStrategies as playingStrategies
+import playerBruniBruscoRomeo.playingStrategies as playingStrategiesGemini
 #import random
 #import game
 
@@ -7,6 +7,6 @@ import playerBruniBruscoRomeo.playingStrategies as playingStrategies
 def playerStrategy (game,state):
     cutOff = 4 # The depth of the search tree. It can be changed to test the performance of the player.
     # The player uses the alphabeta search algorithm to find the best move.
-    value,move = playingStrategies.h_alphabeta_search(game,state,playingStrategies.cutoff_depth(cutOff))
+    value,move = playingStrategiesGemini.h_alphabeta_search(game,state,playingStrategiesGemini.cutoff_depth(cutOff))
   
     return move
